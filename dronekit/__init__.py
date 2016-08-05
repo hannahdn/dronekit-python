@@ -89,6 +89,20 @@ class Attitude(object):
     def __str__(self):
         return "Attitude:pitch=%s,yaw=%s,roll=%s" % (self.pitch, self.yaw, self.roll)
 
+class Raw_IMU(object):
+	def __init__(self, xacc, yacc, zacc, xgyro, ygyro, zgyro, xmag, ymag, zmag):
+		self.xacc = xacc
+		self.yacc = yacc
+		self.zacc = zacc
+		self.xgyro = xgyro
+		self.ygyro = ygyro
+		self.zgyro = zgyro
+		self.xmag = xmag
+		self.ymag = ymag
+		self.zmag = zmag
+
+	def __str__(self):
+		return "Raw_IMU: xacc=%s, yacc=%s, zacc=%s" % (self.xacc, self.yacc, self.zacc)
 
 class LocationGlobal(object):
     """
@@ -1048,6 +1062,29 @@ class Vehicle(HasObservers):
             self._rollspeed = m.rollspeed
             self.notify_attribute_listeners('attitude', self.attitude)
 
+	self._xacc = None
+	self._yacc = None
+	self._zacc = None
+	self._xgyro = None
+	self._ygyro = None
+	self._zgyro = None
+	self._xmag = None
+	self._ymag = None
+	self._zmag = None
+
+	@self.on_message('RAW_IMU')
+	def listener(self, name, m):
+	    self._xacc = m.xacc
+	    self._yacc = m.yacc
+ 	    self._zacc = m.zacc
+	    self._xgyro = m.xgyro
+	    self._ygyro = m.ygyro
+	    self._zgyro = m.zgyro
+	    self._xmag = m.xmag
+	    self._ymag = m.ymag
+	    self._zmag = m.zmag
+	    self.notify_attribute_listeners('raw_imu', self.raw_imu)
+
         self._heading = None
         self._airspeed = None
         self._groundspeed = None
@@ -1200,6 +1237,11 @@ class Vehicle(HasObservers):
                 self._wploader.expected_count = msg.count
                 self._master.waypoint_request_send(0)
 
+
+        @self.on_message(['HOME_POSITION'])
+        def listener(self, name, msg):
+            self._home_location = LocationGlobal(msg.latitude/1.0e7, msg.longitude/1.0e7, msg.altitude/1000.0);
+            
         @self.on_message(['WAYPOINT', 'MISSION_ITEM'])
         def listener(self, name, msg):
             if not self._wp_loaded:
@@ -1652,6 +1694,10 @@ class Vehicle(HasObservers):
         Current vehicle attitude - pitch, yaw, roll (:py:class:`Attitude`).
         """
         return Attitude(self._pitch, self._yaw, self._roll)
+
+    @property
+    def raw_imu(self):
+	return Raw_IMU(self._xacc, self._yacc, self._zacc, self._xgyro, self._ygyro, self._zgyro, self._xmag, self._ymag, self._zmag)
 
     @property
     def gps_0(self):
